@@ -18,7 +18,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -165,12 +166,14 @@ label span {
   font-size: 13px;
 }
 
-input {
+input,
+select {
   width: 100%;
   min-height: 42px;
   border-radius: 7px;
   border: 1px solid var(--border);
   padding: 0 12px;
+  background: #ffffff;
 }
 
 .records {
@@ -208,15 +211,184 @@ input {
   line-height: 1.6;
 }
 
+/* 治疗与参赛放行台 */
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.tabs button {
+  padding: 0 18px;
+}
+
+.tabs button.active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+}
+
+table.ledger {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table.ledger th,
+table.ledger td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+table.ledger th {
+  color: #64748b;
+  font-weight: 600;
+  background: #f8fafc;
+  white-space: nowrap;
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge.ok {
+  background: #dcfce7;
+  color: var(--secondary);
+}
+
+.badge.hold {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge.void {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.badge.neutral {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.board-lists {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.cards {
+  display: grid;
+  gap: 12px;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: #fbfdff;
+}
+
+.card.cleared {
+  border-left: 5px solid var(--secondary);
+}
+
+.card.pending {
+  border-left: 5px solid #d97706;
+}
+
+.card.voided {
+  border-left: 5px solid #b91c1c;
+}
+
+.card h3,
+.card p {
+  margin: 0 0 6px;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.card-head h3 {
+  margin: 0;
+}
+
+.reasons,
+.changes {
+  margin: 8px 0;
+  padding-left: 18px;
+  color: #b45309;
+  line-height: 1.7;
+}
+
+.changes {
+  color: #475569;
+}
+
+.muted {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.form-error {
+  margin: 12px 0 0;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.edit-panel {
+  border-left: 5px solid var(--accent);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.actions button {
+  padding: 0 14px;
+}
+
+.inline-field {
+  display: grid;
+  gap: 6px;
+  min-width: 220px;
+}
+
+.inline-field span {
+  color: #64748b;
+  font-size: 13px;
+}
+
 @media (max-width: 860px) {
   .metrics,
   .workspace,
-  .field-grid {
+  .field-grid,
+  .board-lists {
     grid-template-columns: 1fr;
   }
 
   .hero {
     min-height: 210px;
     padding: 24px;
+  }
+
+  table.ledger {
+    display: block;
+    overflow-x: auto;
   }
 }
