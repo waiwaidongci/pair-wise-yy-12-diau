@@ -1,126 +1,110 @@
+import { useState } from "react";
 import "./styles.css";
+import { decideClearance, overallDeadline } from "./domain/judgment";
+import {
+  correctTreatment,
+  createGaitAssessment,
+  createTreatment,
+  voidClearancesForHorse,
+  type GaitInput,
+  type TreatmentInput,
+} from "./domain/records";
+import { buildSeed } from "./domain/seed";
+import type { Clearance, GaitAssessment, TreatmentRecord } from "./domain/types";
+import { ClearanceBoard } from "./pages/ClearanceBoard";
 
-const project = {
-  "sourceNo": 6,
-  "id": "hxyfront-62011",
-  "port": 62011,
-  "title": "马术蹄铁修整档案",
-  "domain": "马术蹄铁",
-  "prompt": "做一个面向马术俱乐部蹄铁师的修蹄记录前端项目，可以记录马匹编号、步态问题、蹄形评估、蹄铁类型、钉位、修蹄日期、下次复查日期和照片备注。页面需要有马匹列表、复查提醒、左右前后蹄对比记录、异常步态标记和蹄铁更换历史。",
-  "palette": [
-    "#78350f",
-    "#166534",
-    "#2563eb"
-  ],
-  "metrics": [
-    "待复查",
-    "异常步态",
-    "更换蹄铁",
-    "马匹档案"
-  ],
-  "filters": [
-    "前蹄",
-    "后蹄",
-    "运动马",
-    "休养马"
-  ],
-  "fields": [
-    "马匹编号",
-    "步态问题",
-    "蹄形评估",
-    "蹄铁类型",
-    "钉位",
-    "下次复查"
-  ],
-  "records": [
-    [
-      "HORSE-18",
-      "右前蹄外侧磨耗",
-      "铝蹄铁",
-      "14天后复查"
-    ],
-    [
-      "HORSE-27",
-      "后蹄裂纹",
-      "加护蹄垫",
-      "拍照归档"
-    ],
-    [
-      "HORSE-31",
-      "步态轻微不稳",
-      "需教练复核",
-      "已标记"
-    ]
-  ]
-};
+const seed = buildSeed(new Date());
 
 function App() {
+  const [treatments, setTreatments] = useState<TreatmentRecord[]>(seed.treatments);
+  const [gaits, setGaits] = useState<GaitAssessment[]>(seed.gaits);
+  const [clearances, setClearances] = useState<Clearance[]>(seed.clearances);
+
+  // 记录变更后：作废旧放行（保留旧结论）→ 按最新记录重新核对 → 追加新结论
+  const recheck = (
+    horseId: string,
+    reason: string,
+    nextTreatments: TreatmentRecord[],
+    nextGaits: GaitAssessment[]
+  ) => {
+    const now = new Date();
+    setClearances((prev) => [
+      ...voidClearancesForHorse(prev, horseId, now, reason),
+      decideClearance(horseId, nextTreatments, nextGaits, now),
+    ]);
+  };
+
+  const handleAddTreatment = (input: TreatmentInput) => {
+    const next = [...treatments, createTreatment(input, new Date())];
+    setTreatments(next);
+    recheck(input.horseId, "新增治疗记录，重新核对", next, gaits);
+  };
+
+  const handleCorrectTreatment = (id: string, patch: TreatmentInput) => {
+    const next = correctTreatment(treatments, id, patch, new Date());
+    setTreatments(next);
+    recheck(patch.horseId, "治疗记录更正，原放行作废", next, gaits);
+  };
+
+  const handleAddGait = (input: GaitInput) => {
+    const next = [...gaits, createGaitAssessment(input)];
+    setGaits(next);
+    recheck(input.horseId, "新增步态评估，重新核对", treatments, next);
+  };
+
+  const handleRecheck = (horseId: string) =>
+    recheck(horseId, "报名前人工核对", treatments, gaits);
+
+  const horseIds = [...new Set([...treatments, ...gaits, ...clearances].map((r) => r.horseId))].sort();
+  const currentClearances = horseIds
+    .map((id) =>
+      clearances
+        .filter((c) => c.horseId === id && !c.voidedAt)
+        .sort((a, b) => b.decidedAt.localeCompare(a.decidedAt))[0]
+    )
+    .filter((c): c is Clearance => Boolean(c));
+  const nowMs = Date.now();
+  const metrics: Array<[string, number]> = [
+    ["可参赛", currentClearances.filter((c) => c.status === "cleared").length],
+    ["待复查", currentClearances.filter((c) => c.status === "pending").length],
+    [
+      "退赛期内",
+      horseIds.filter((id) => {
+        const d = overallDeadline(treatments, id);
+        return d !== null && d.getTime() > nowMs;
+      }).length,
+    ],
+    ["作废放行", clearances.filter((c) => c.voidedAt).length],
+  ];
+
   return (
     <main className="app">
       <section className="hero">
-        <p>{project.id} · 源提示词{project.sourceNo} · Port {project.port}</p>
-        <h1>{project.title}</h1>
-        <span>{project.prompt}</span>
+        <p>hxyfront-62011 · 源提示词6 · Port 62011 · 马术蹄铁修整档案</p>
+        <h1>治疗与参赛放行台</h1>
+        <span>
+          蹄底脓肿用药不再只留修蹄结果：登记马号、蹄位、药名、末次用药时间与退赛期，同类药再用按更晚时间延长退赛期；报名前先核对退赛期，再看赛前两次步态评估，期限没到或步态异常的马匹只留在待复查，不进入可参赛名单；治疗记录更正后，原有放行作废并保留旧结论。
+        </span>
       </section>
 
       <section className="metrics">
-        {project.metrics.map((metric: string, index: number) => (
-          <article key={metric}>
-            <small>{metric}</small>
-            <strong>{[28, 6, 14, 91][index] ?? 10}</strong>
+        {metrics.map(([label, value]) => (
+          <article key={label}>
+            <small>{label}</small>
+            <strong>{value}</strong>
           </article>
         ))}
       </section>
 
-      <section className="workspace">
-        <aside className="panel">
-          <h2>{project.domain}分类</h2>
-          <div className="chips">
-            {project.filters.map((item: string) => (
-              <button key={item}>{item}</button>
-            ))}
-          </div>
-        </aside>
-
-        <section className="panel form-panel">
-          <div className="heading">
-            <div>
-              <p>专业字段</p>
-              <h2>新增记录</h2>
-            </div>
-            <button className="primary">保存记录</button>
-          </div>
-          <div className="field-grid">
-            {project.fields.map((field: string) => (
-              <label key={field}>
-                <span>{field}</span>
-                <input placeholder={"填写" + field} />
-              </label>
-            ))}
-          </div>
-        </section>
-      </section>
-
-      <section className="panel">
-        <div className="heading">
-          <div>
-            <p>近期记录</p>
-            <h2>工作台摘要</h2>
-          </div>
-          <button>导出CSV</button>
-        </div>
-        <div className="records">
-          {project.records.map((record: string[], index: number) => (
-            <article key={record.join("-")}>
-              <b>{String(index + 1).padStart(2, "0")}</b>
-              <div>
-                <h3>{record[0]}</h3>
-                <p>{record.slice(1).join(" · ")}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+      <ClearanceBoard
+        treatments={treatments}
+        gaits={gaits}
+        clearances={clearances}
+        onAddTreatment={handleAddTreatment}
+        onCorrectTreatment={handleCorrectTreatment}
+        onAddGait={handleAddGait}
+        onRecheck={handleRecheck}
+      />
     </main>
   );
 }
